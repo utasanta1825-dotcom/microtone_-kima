@@ -9,7 +9,7 @@ import pandas as pd
 # =========================
 # 設定
 # =========================
-BASE_DIR = "microtone"         # ここはあなたのフォルダ名に合わせる
+BASE_DIR = "微分音"         # ここはあなたのフォルダ名に合わせる
 SINGLE_DIR = os.path.join(BASE_DIR, "single")
 CHORD_DIR  = os.path.join(BASE_DIR, "chord")
 
