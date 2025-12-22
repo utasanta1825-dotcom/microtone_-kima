@@ -65,29 +65,29 @@ def append_row(row):
     with open(LOCAL_CSV, "a", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(row)
 
-def make_pairs(single_files, chord_files):
-    """
-    1ペア = A_, B_, AB_ を同じIDで揃える想定。
-    例: A_xxx.wav / B_xxx.wav / AB_xxx.wav -> pair_id = xxx
-    """
-    # A/B は prefix で判定
-    A = {f[2:-4]: f for f in single_files if f.startswith("A_") and f.lower().endswith(".wav")}
-    B = {f[2:-4]: f for f in single_files if f.startswith("B_") and f.lower().endswith(".wav")}
-    AB = {f[3:-4]: f for f in chord_files  if f.startswith("AB_") and f.lower().endswith(".wav")}
 
-    pair_ids = sorted(list(set(A.keys()) & set(B.keys()) & set(AB.keys())))
+def make_pairs(single_files, chord_files):
+    seq = {f.replace("_seq.wav", ""): f
+           for f in single_files if f.endswith("_seq.wav")}
+    sim = {f.replace("_sim.wav", ""): f
+           for f in chord_files if f.endswith("_sim.wav")}
+
+    pair_ids = sorted(set(seq.keys()) & set(sim.keys()))
     pairs = []
+
     for pid in pair_ids:
         pairs.append({
             "pair_id": pid,
-            "A": os.path.join(SINGLE_DIR, A[pid]),
-            "B": os.path.join(SINGLE_DIR, B[pid]),
-            "AB": os.path.join(CHORD_DIR, AB[pid]),
-            "A_name": A[pid],
-            "B_name": B[pid],
-            "AB_name": AB[pid],
+            "A": os.path.join(SINGLE_DIR, seq[pid]),   # sequential
+            "B": None,                                 # もう分けなくてOK
+            "AB": os.path.join(CHORD_DIR, sim[pid]),   # simultaneous
+            "A_name": seq[pid],
+            "B_name": "",
+            "AB_name": sim[pid],
         })
     return pairs
+
+
 
 # =========================
 # UI / ページ設定
