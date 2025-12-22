@@ -9,9 +9,9 @@ import pandas as pd
 # =========================
 # 設定
 # =========================
-BASE_DIR = "微分音"         # ここはあなたのフォルダ名に合わせる
-SINGLE_DIR = os.path.join(BASE_DIR, "sequential")
-CHORD_DIR  = os.path.join(BASE_DIR, "simultaneous")
+BASE_DIR = "微分音"
+SEQ_DIR = os.path.join(BASE_DIR, "sequential")     # single -> seq
+SIM_DIR = os.path.join(BASE_DIR, "simultaneous")   # chord  -> sim
 
 LOCAL_CSV = "evaluation_results.csv"
 ADMIN_PIN = "0000"
@@ -20,7 +20,6 @@ ADMIN_PIN = "0000"
 # ユーティリティ
 # =========================
 def abs_path(rel_path: str) -> str:
-    """app.py の場所を基準に絶対パス化（Streamlit Cloudでも安定）"""
     base = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base, rel_path)
 
@@ -44,19 +43,16 @@ def init_csv():
             "Participant_ID",
             "Timestamp_UTC",
             "Pair_ID",
-            "A_File",
-            "B_File",
-            "AB_File",
-            # 単音（順番再生）評価
-            "Single_Valence",
-            "Single_Arousal",
-            "Single_Diff",
-            "Single_PlayCount",
-            # 同時音（和音）評価
-            "Chord_Valence",
-            "Chord_Arousal",
-            "Chord_Diff",
-            "Chord_PlayCount",
+            "SEQ_File",
+            "SIM_File",
+            "SEQ_Valence",
+            "SEQ_Arousal",
+            "SEQ_Diff",
+            "SEQ_PlayCount",
+            "SIM_Valence",
+            "SIM_Arousal",
+            "SIM_Diff",
+            "SIM_PlayCount",
         ]
         with open(LOCAL_CSV, "w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerow(header)
@@ -65,25 +61,22 @@ def append_row(row):
     with open(LOCAL_CSV, "a", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(row)
 
-  
-def make_pairs(single_files, chord_files):
-    seq = {f.replace("_seq.wav", ""): f for f in single_files if f.endswith("_seq.wav")}
-    sim = {f.replace("_sim.wav", ""): f for f in chord_files if f.endswith("_sim.wav")}
+def make_pairs(seq_files, sim_files):
+    # 例: xxx_seq.wav / xxx_sim.wav の共通 xxx をペアIDにする
+    seq = {f.replace("_seq.wav", ""): f for f in seq_files if f.endswith("_seq.wav")}
+    sim = {f.replace("_sim.wav", ""): f for f in sim_files if f.endswith("_sim.wav")}
 
     pair_ids = sorted(set(seq.keys()) & set(sim.keys()))
     pairs = []
     for pid in pair_ids:
         pairs.append({
             "pair_id": pid,
-            "SEQ": os.path.join(SINGLE_DIR, seq[pid]),
-            "SIM": os.path.join(CHORD_DIR, sim[pid]),
+            "SEQ": os.path.join(SEQ_DIR, seq[pid]),
+            "SIM": os.path.join(SIM_DIR, sim[pid]),
             "SEQ_name": seq[pid],
             "SIM_name": sim[pid],
         })
     return pairs
-
-
-
 
 # =========================
 # UI / ページ設定
@@ -102,7 +95,7 @@ hr {border:none; border-top:1px solid #eee; margin: 14px 0;}
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='big-title'>音律評価実験（2音）</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub'>単音（順番に）と同時音（和音）を別々に評価します。</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub'>seq（順番再生）と sim（同時音）を別々に評価します。</div>", unsafe_allow_html=True)
 
 # =========================
 # セッション初期化
@@ -112,27 +105,25 @@ if "participant_id" not in st.session_state:
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 
-# 進行管理
 if "pair_order" not in st.session_state:
     st.session_state.pair_order = []
 if "pair_index" not in st.session_state:
     st.session_state.pair_index = 0
 
-# フェーズ管理（single -> chord）
-
+# phase: "seq" -> "sim"
 if "phase" not in st.session_state:
-    st.session_state.phase = "seq"   # ←ここ超重要
+    st.session_state.phase = "seq"
 
+# 再生管理（seq / sim）
+if "played_seq" not in st.session_state:
+    st.session_state.played_seq = False
+if "played_sim" not in st.session_state:
+    st.session_state.played_sim = False
 
-# 再生管理（フェーズごと）
-if "played_single" not in st.session_state:
-    st.session_state.played_single = False
-if "played_chord" not in st.session_state:
-    st.session_state.played_chord = False
-if "play_count_single" not in st.session_state:
-    st.session_state.play_count_single = 0
-if "play_count_chord" not in st.session_state:
-    st.session_state.play_count_chord = 0
+if "play_count_seq" not in st.session_state:
+    st.session_state.play_count_seq = 0
+if "play_count_sim" not in st.session_state:
+    st.session_state.play_count_sim = 0
 
 # =========================
 # 参加者ID入力
@@ -173,33 +164,32 @@ if st.session_state.is_admin:
 participant_id = st.session_state.participant_id
 
 # =========================
-# 音源ロード（single / chord）
+# 音源ロード（seq / sim）
 # =========================
-single_dir_full, single_files = list_wavs(SINGLE_DIR)
-chord_dir_full, chord_files = list_wavs(CHORD_DIR)
+seq_dir_full, seq_files = list_wavs(SEQ_DIR)
+sim_dir_full, sim_files = list_wavs(SIM_DIR)
 
-if single_dir_full is None:
-    st.error(f"音源フォルダが見つかりません: {SINGLE_DIR}")
+if seq_dir_full is None:
+    st.error(f"音源フォルダが見つかりません: {SEQ_DIR}")
     st.stop()
-if chord_dir_full is None:
-    st.error(f"音源フォルダが見つかりません: {CHORD_DIR}")
+if sim_dir_full is None:
+    st.error(f"音源フォルダが見つかりません: {SIM_DIR}")
     st.stop()
 
-pairs = make_pairs(single_files, chord_files)
+pairs = make_pairs(seq_files, sim_files)
 if not pairs:
-    st.error("ペアが作れませんでした。A_ / B_ / AB_ の命名で揃っているか確認してください。")
-    st.info("例：microtone/single/A_test.wav, microtone/single/B_test.wav, microtone/chord/AB_test.wav")
+    st.error("ペアが作れませんでした。*_seq.wav と *_sim.wav の命名が揃っているか確認してください。")
     st.stop()
 
-# 初回だけランダム順を決める
+# 初回だけランダム順
 if not st.session_state.pair_order:
     st.session_state.pair_order = random.sample(range(len(pairs)), len(pairs))
     st.session_state.pair_index = 0
-    st.session_state.phase = "single"
-    st.session_state.played_single = False
-    st.session_state.played_chord = False
-    st.session_state.play_count_single = 0
-    st.session_state.play_count_chord = 0
+    st.session_state.phase = "seq"
+    st.session_state.played_seq = False
+    st.session_state.played_sim = False
+    st.session_state.play_count_seq = 0
+    st.session_state.play_count_sim = 0
     init_csv()
 
 idx = st.session_state.pair_index
@@ -214,27 +204,24 @@ pair = pairs[st.session_state.pair_order[idx]]
 st.markdown(f"**参加者ID:** `{participant_id}`　<span class='badge'>{idx+1} / {total} ペア</span>", unsafe_allow_html=True)
 st.progress((idx + 1) / total)
 
-# =========================
-# フェーズ表示
-# =========================
 phase = st.session_state.phase
 
+# =========================
+# ① seq フェーズ
+# =========================
 if phase == "seq":
-    # =====================
-    # ① sequential
-    # =====================
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ① 単音（順番再生：sequential）を評価")
+    st.markdown("## ① seq（順番再生）を評価")
     st.markdown("<div class='small'>*_seq.wav を聴いて評価します。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     seq_bytes = read_audio_bytes(pair["SEQ"])
     if seq_bytes is None:
-        st.error("sequentialファイルの読み込みに失敗しました。")
+        st.error("seqファイルの読み込みに失敗しました。")
         st.write("SEQ:", pair["SEQ"])
         st.stop()
 
-    if st.button("▶ 単音（順番再生）の再生を有効化"):
+    if st.button("▶ seq の再生を有効化"):
         st.session_state.played_seq = True
         st.session_state.play_count_seq += 1
 
@@ -243,24 +230,42 @@ if phase == "seq":
     else:
         st.info("まず上のボタンで再生を有効化してください。")
 
+    st.caption(f"seq 再生回数：{st.session_state.play_count_seq}")
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("### 評価（seq） 1=低い / 5=高い")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="seq_valence")
+    with c2:
+        st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="seq_arousal")
+    with c3:
+        st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="seq_diff")
+
+    if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+        st.session_state.phase = "sim"
+        st.session_state.played_sim = False
+        st.session_state.play_count_sim = 0
+        st.rerun()
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-elif phase == "sim":
-    # =====================
-    # ② simultaneous
-    # =====================
+# =========================
+# ② sim フェーズ
+# =========================
+else:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ② 同時音（simultaneous）を評価")
+    st.markdown("## ② sim（同時音）を評価")
     st.markdown("<div class='small'>*_sim.wav を聴いて評価します。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
     sim_bytes = read_audio_bytes(pair["SIM"])
     if sim_bytes is None:
-        st.error("simultaneousファイルの読み込みに失敗しました。")
+        st.error("simファイルの読み込みに失敗しました。")
         st.write("SIM:", pair["SIM"])
         st.stop()
 
-    if st.button("▶ 同時音の再生を有効化"):
+    if st.button("▶ sim の再生を有効化"):
         st.session_state.played_sim = True
         st.session_state.play_count_sim += 1
 
@@ -269,105 +274,53 @@ elif phase == "sim":
     else:
         st.info("まず上のボタンで再生を有効化してください。")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        s_valence = st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="s_valence")
-    with c2:
-        s_arousal = st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="s_arousal")
-    with c3:
-        s_diff = st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="s_diff")
-
-
-    if not st.session_state.played_seq:
-        st.warning("⚠️ 単音を再生してから評価してください。")
-
-    if st.button("単音の評価を確定して、同時音へ", disabled=not st.session_state.played_seq):
-        st.session_state.phase = "sim"
-        st.session_state.played_chord = False
-        st.session_state.play_count_chord = 0
-        st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-else:
-    # sim phase
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ② 同時音（和音）を評価")
-    st.markdown("<div class='small'>AとBを同時に鳴らした音（和音）を聴いて評価してください。</div>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    ab_bytes = read_audio_bytes(pair["AB"])
-    if ab_bytes is None:
-        st.error("同時音ファイルの読み込みに失敗しました。ファイル名/配置を確認してください。")
-        st.write("AB:", pair["AB"])
-        st.stop()
-
-    if st.button("▶ 同時音の再生を有効化（AB）"):
-        st.session_state.played_sim = True
-        st.session_state.play_count_sim += 1
-
-    if st.session_state.played_sim:
-        st.audio(ab_bytes, format="audio/wav")
-    else:
-        st.info("まず上のボタンで再生を有効化してください。")
-
-    st.caption(f"同時音フェーズ再生回数：{st.session_state.play_count_sim}")
+    st.caption(f"sim 再生回数：{st.session_state.play_count_sim}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("### 評価（同時音） 1=低い / 5=高い")
-
+    st.markdown("### 評価（sim） 1=低い / 5=高い")
     c1, c2, c3 = st.columns(3)
     with c1:
-        c_valence = st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="c_valence")
+        sim_valence = st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="sim_valence")
     with c2:
-        c_arousal = st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="c_arousal")
+        sim_arousal = st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="sim_arousal")
     with c3:
-        c_diff = st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="c_diff")
+        sim_diff = st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="sim_diff")
 
-    if not st.session_state.played_chord:
-        st.warning("⚠️ 同時音を再生してから評価してください。")
-
-    # 保存して次へ
-    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_chord):
+    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
 
-        # 単音の評価は session_state から拾う（singleフェーズで入力した値）
-        s_valence = st.session_state.get("s_valence", 3)
-        s_arousal = st.session_state.get("s_arousal", 3)
-        s_diff    = st.session_state.get("s_diff", 3)
+        # seq の値
+        seq_valence = st.session_state.get("seq_valence", 3)
+        seq_arousal = st.session_state.get("seq_arousal", 3)
+        seq_diff    = st.session_state.get("seq_diff", 3)
 
         row = [
             participant_id,
             timestamp,
             pair["pair_id"],
-            pair["A_name"],
-            pair["B_name"],
-            pair["AB_name"],
-            s_valence,
-            s_arousal,
-            s_diff,
-            st.session_state.play_count_single,
-            c_valence,
-            c_arousal,
-            c_diff,
-            st.session_state.play_count_chord,
+            pair["SEQ_name"],
+            pair["SIM_name"],
+            seq_valence,
+            seq_arousal,
+            seq_diff,
+            st.session_state.play_count_seq,
+            sim_valence,
+            sim_arousal,
+            sim_diff,
+            st.session_state.play_count_sim,
         ]
         append_row(row)
 
+        # 次ペアへ：状態リセット
         st.session_state.pair_index += 1
-　　　　　st.session_state.phase = "seq"
-　　　　　st.session_state.played_seq = False
-　　　　　st.session_state.played_sim = False
-　　　　　st.session_state.play_count_seq = 0
-　　　　　st.session_state.play_count_sim = 0
-　　　　　st.rerun()
+        st.session_state.phase = "seq"
+        st.session_state.played_seq = False
+        st.session_state.played_sim = False
+        st.session_state.play_count_seq = 0
+        st.session_state.play_count_sim = 0
 
-        # ラジオの前回値が残るのが気になる場合は key を変えるか clear する
-        for k in ["s_valence","s_arousal","s_diff","c_valence","c_arousal","c_diff"]:
+        # 評価値も消す（前回値残り対策）
+        for k in ["seq_valence","seq_arousal","seq_diff","sim_valence","sim_arousal","sim_diff"]:
             if k in st.session_state:
                 del st.session_state[k]
 
