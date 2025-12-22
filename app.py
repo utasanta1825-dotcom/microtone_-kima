@@ -226,26 +226,23 @@ if phase == "single":
     st.markdown("<div class='small'>A → B の順に聴いて、全体の印象を評価してください。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    a_bytes = read_audio_bytes(pair["A"])
-    b_bytes = read_audio_bytes(pair["B"])
+   # ===== 単音（順番再生：seq.wav を1本） =====
 
-    if (a_bytes is None) or (b_bytes is None):
-        st.error("単音ファイルの読み込みに失敗しました。ファイル名/配置を確認してください。")
-        st.write("A:", pair["A"], " / B:", pair["B"])
-        st.stop()
+seq_bytes = read_audio_bytes(pair["A"])
+if seq_bytes is None:
+    st.error("sequentialファイルの読み込みに失敗しました。")
+    st.write("SEQ:", pair["A"])
+    st.stop()
 
-    # 再生UI
-    if st.button("▶ 単音の再生を有効化（A→B）"):
-        st.session_state.played_single = True
-        st.session_state.play_count_single += 1
+if st.button("▶ 単音（順番再生）の再生を有効化"):
+    st.session_state.played_single = True
+    st.session_state.play_count_single += 1
 
-    if st.session_state.played_single:
-        st.write("### A（単音）")
-        st.audio(a_bytes, format="audio/wav")
-        st.write("### B（単音）")
-        st.audio(b_bytes, format="audio/wav")
-    else:
-        st.info("まず上のボタンで再生を有効化してください。")
+if st.session_state.played_single:
+    st.audio(seq_bytes, format="audio/wav")
+else:
+    st.info("まず上のボタンで再生を有効化してください。")
+
 
     st.caption(f"単音フェーズ再生回数：{st.session_state.play_count_single}")
 
