@@ -220,34 +220,60 @@ st.progress((idx + 1) / total)
 # フェーズ表示
 # =========================
 phase = st.session_state.phase
-if phase == "single":
+
+if phase == "seq":
+    # =====================
+    # ① sequential
+    # =====================
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ① 単音（順番に再生）を評価")
-    st.markdown("<div class='small'>A → B の順に聴いて、全体の印象を評価してください。</div>", unsafe_allow_html=True)
+    st.markdown("## ① 単音（順番再生：sequential）を評価")
+    st.markdown("<div class='small'>*_seq.wav を聴いて評価します。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-   # ===== 単音（順番再生：seq.wav を1本） =====
+    seq_bytes = read_audio_bytes(pair["SEQ"])
+    if seq_bytes is None:
+        st.error("sequentialファイルの読み込みに失敗しました。")
+        st.write("SEQ:", pair["SEQ"])
+        st.stop()
 
-seq_bytes = read_audio_bytes(pair["A"])
-if seq_bytes is None:
-    st.error("sequentialファイルの読み込みに失敗しました。")
-    st.write("SEQ:", pair["A"])
-    st.stop()
+    if st.button("▶ 単音（順番再生）の再生を有効化"):
+        st.session_state.played_seq = True
+        st.session_state.play_count_seq += 1
 
-if st.button("▶ 単音（順番再生）の再生を有効化"):
-    st.session_state.played_single = True
-    st.session_state.play_count_single += 1
+    if st.session_state.played_seq:
+        st.audio(seq_bytes, format="audio/wav")
+    else:
+        st.info("まず上のボタンで再生を有効化してください。")
 
-if st.session_state.played_single:
-    st.audio(seq_bytes, format="audio/wav")
-else:
-    st.info("まず上のボタンで再生を有効化してください。")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+elif phase == "sim":
+    # =====================
+    # ② simultaneous
+    # =====================
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("## ② 同時音（simultaneous）を評価")
+    st.markdown("<div class='small'>*_sim.wav を聴いて評価します。</div>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    sim_bytes = read_audio_bytes(pair["SIM"])
+    if sim_bytes is None:
+        st.error("simultaneousファイルの読み込みに失敗しました。")
+        st.write("SIM:", pair["SIM"])
+        st.stop()
+
+    if st.button("▶ 同時音の再生を有効化"):
+        st.session_state.played_sim = True
+        st.session_state.play_count_sim += 1
+
+    if st.session_state.played_sim:
+        st.audio(sim_bytes, format="audio/wav")
+    else:
+        st.info("まず上のボタンで再生を有効化してください。")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-    st.caption(f"単音フェーズ再生回数：{st.session_state.play_count_single}")
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("### 評価（単音） 1=低い / 5=高い")
 
     c1, c2, c3 = st.columns(3)
     with c1:
