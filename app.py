@@ -97,6 +97,12 @@ hr {border:none; border-top:1px solid #eee; margin: 14px 0;}
 st.markdown("<div class='big-title'>音律評価実験（2音）</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub'>seq（順番再生）と sim（同時音）を別々に評価します。</div>", unsafe_allow_html=True)
 
+if st.button("🔄 音源キャッシュをクリア"):
+    st.cache_data.clear()
+    st.session_state.played_seq = False
+    st.session_state.played_sim = False
+    st.rerun()
+
 # =========================
 # セッション初期化
 # =========================
