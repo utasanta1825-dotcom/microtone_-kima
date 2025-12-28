@@ -95,7 +95,7 @@ hr {border:none; border-top:1px solid #eee; margin: 14px 0;}
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='big-title'>音律評価実験（2音）</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub'>seq（順番再生）と sim（同時音）を別々に評価します。</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub'>順番再生と同時再生を別々に評価します。</div>", unsafe_allow_html=True)
 
 if st.button("🔄 音源キャッシュをクリア"):
     st.cache_data.clear()
@@ -217,7 +217,7 @@ phase = st.session_state.phase
 # =========================
 if phase == "seq":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ① seq（順番再生）を評価")
+    st.markdown("## ① 順番再生を評価")
     st.markdown("<div class='small'>*_seq.wav を聴いて評価します。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
@@ -227,7 +227,7 @@ if phase == "seq":
         st.write("SEQ:", pair["SEQ"])
         st.stop()
 
-    if st.button("▶ seq の再生を有効化"):
+    if st.button("▶ 再生を有効化"):
         st.session_state.played_seq = True
         st.session_state.play_count_seq += 1
 
@@ -242,7 +242,7 @@ if phase == "seq":
     st.markdown("### 評価（seq） 1=低い / 5=高い")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="seq_valence")
+        st.radio("心地よい", [1,2,3,4,5], index=2, horizontal=True, key="seq_valence")
     with c2:
         st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="seq_arousal")
     with c3:
@@ -261,7 +261,7 @@ if phase == "seq":
 # =========================
 else:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("## ② sim（同時音）を評価")
+    st.markdown("## ② 同時音を評価")
     st.markdown("<div class='small'>*_sim.wav を聴いて評価します。</div>", unsafe_allow_html=True)
     st.markdown("---")
 
@@ -271,7 +271,7 @@ else:
         st.write("SIM:", pair["SIM"])
         st.stop()
 
-    if st.button("▶ sim の再生を有効化"):
+    if st.button("▶ 再生を有効化"):
         st.session_state.played_sim = True
         st.session_state.play_count_sim += 1
 
@@ -286,7 +286,7 @@ else:
     st.markdown("### 評価（sim） 1=低い / 5=高い")
     c1, c2, c3 = st.columns(3)
     with c1:
-        sim_valence = st.radio("好き（快）", [1,2,3,4,5], index=2, horizontal=True, key="sim_valence")
+        sim_valence = st.radio("心地よい", [1,2,3,4,5], index=2, horizontal=True, key="sim_valence")
     with c2:
         sim_arousal = st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="sim_arousal")
     with c3:
