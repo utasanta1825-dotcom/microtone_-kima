@@ -268,41 +268,41 @@ if phase == "seq":
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
+    # ★ここから評価UI（必ず if phase=="seq" の中に入れる）
     st.markdown("### 評価")
-c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-with c1:
-    st.markdown("**聴き心地**")
-    st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="seq_valence",
-        format_func=lambda x: VALENCE_LABELS[x],
-    )
+    with c1:
+        st.markdown("**聴き心地**")
+        st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="seq_valence",
+            format_func=lambda x: VALENCE_LABELS[x],
+        )
 
-with c2:
-    st.markdown("**緊張**")
-    st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="seq_arousal",
-        format_func=lambda x: AROUSAL_LABELS[x],
-    )
+    with c2:
+        st.markdown("**緊張**")
+        st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="seq_arousal",
+            format_func=lambda x: AROUSAL_LABELS[x],
+        )
 
-with c3:
-    st.markdown("**違和感**")
-    st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="seq_diff",
-        format_func=lambda x: DIFF_LABELS[x],
-    )
+    with c3:
+        st.markdown("**違和感**")
+        st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="seq_diff",
+            format_func=lambda x: DIFF_LABELS[x],
+        )
 
-
-if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+    if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
         st.session_state.phase = "sim"
         st.session_state.played_sim = False
         st.session_state.play_count_sim = 0
@@ -337,42 +337,42 @@ else:
     st.caption(f"sim 再生回数：{st.session_state.play_count_sim}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
-  
+
+    # ★ここから評価UI（必ず else の中に入れる）
     st.markdown("### 評価（sim）")
-c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-with c1:
-    st.markdown("**聴き心地**")
-    sim_valence = st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="sim_valence",
-        format_func=lambda x: VALENCE_LABELS[x],
-    )
+    with c1:
+        st.markdown("**聴き心地**")
+        sim_valence = st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="sim_valence",
+            format_func=lambda x: VALENCE_LABELS[x],
+        )
 
-with c2:
-    st.markdown("**緊張**")
-    sim_arousal = st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="sim_arousal",
-        format_func=lambda x: AROUSAL_LABELS[x],
-    )
+    with c2:
+        st.markdown("**緊張**")
+        sim_arousal = st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="sim_arousal",
+            format_func=lambda x: AROUSAL_LABELS[x],
+        )
 
-with c3:
-    st.markdown("**違和感**")
-    sim_diff = st.radio(
-        label="",
-        options=[5, 4, 3, 2, 1],
-        index=2,
-        key="sim_diff",
-        format_func=lambda x: DIFF_LABELS[x],
-    )
+    with c3:
+        st.markdown("**違和感**")
+        sim_diff = st.radio(
+            label="",
+            options=[5, 4, 3, 2, 1],
+            index=2,
+            key="sim_diff",
+            format_func=lambda x: DIFF_LABELS[x],
+        )
 
-
-if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
+    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
 
         # seq の値
@@ -413,3 +413,5 @@ if st.button("評価を記録して次のペアへ", disabled=not st.session_sta
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+
