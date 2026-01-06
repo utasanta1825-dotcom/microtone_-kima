@@ -302,7 +302,7 @@ with c3:
     )
 
 
-    if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
         st.session_state.phase = "sim"
         st.session_state.played_sim = False
         st.session_state.play_count_sim = 0
@@ -372,7 +372,7 @@ with c3:
     )
 
 
-    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
+if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
 
         # seq の値
