@@ -83,6 +83,34 @@ def make_pairs(seq_files, sim_files):
 # =========================
 st.set_page_config(page_title="音律評価実験（2音）", layout="centered")
 
+# =========================
+# 評価ラベル（写真風）
+# =========================
+VALENCE_LABELS = {
+    5: "とてもよい",
+    4: "よい",
+    3: "ふつう",
+    2: "あまりよくない",
+    1: "悪い",
+}
+
+AROUSAL_LABELS = {
+    5: "とても緊張感がある",
+    4: "緊張感がある",
+    3: "どちらでもない",
+    2: "あまり緊張感がない",
+    1: "全く緊張感がない",
+}
+
+DIFF_LABELS = {
+    5: "とても違和感がある",
+    4: "違和感がある",
+    3: "どちらでもない",
+    2: "あまり違和感がない",
+    1: "全く違和感がない",
+}
+
+
 st.markdown("""
 <style>
 .big-title {font-size: 28px; font-weight: 800; margin-bottom: 6px;}
@@ -239,14 +267,40 @@ if phase == "seq":
     st.caption(f"seq 再生回数：{st.session_state.play_count_seq}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("### 評価（seq） 1=低い / 5=高い")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.radio("心地よい", [1,2,3,4,5], index=2, horizontal=True, key="seq_valence")
-    with c2:
-        st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="seq_arousal")
-    with c3:
-        st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="seq_diff")
+
+    st.markdown("### 評価")
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.markdown("**聴き心地**")
+    st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="seq_valence",
+        format_func=lambda x: VALENCE_LABELS[x],
+    )
+
+with c2:
+    st.markdown("**緊張**")
+    st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="seq_arousal",
+        format_func=lambda x: AROUSAL_LABELS[x],
+    )
+
+with c3:
+    st.markdown("**違和感**")
+    st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="seq_diff",
+        format_func=lambda x: DIFF_LABELS[x],
+    )
+
 
     if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
         st.session_state.phase = "sim"
@@ -283,14 +337,40 @@ else:
     st.caption(f"sim 再生回数：{st.session_state.play_count_sim}")
 
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("### 評価（sim） 1=低い / 5=高い")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        sim_valence = st.radio("心地よい", [1,2,3,4,5], index=2, horizontal=True, key="sim_valence")
-    with c2:
-        sim_arousal = st.radio("緊張", [1,2,3,4,5], index=2, horizontal=True, key="sim_arousal")
-    with c3:
-        sim_diff = st.radio("違和感", [1,2,3,4,5], index=2, horizontal=True, key="sim_diff")
+  
+    st.markdown("### 評価（sim）")
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.markdown("**聴き心地**")
+    sim_valence = st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="sim_valence",
+        format_func=lambda x: VALENCE_LABELS[x],
+    )
+
+with c2:
+    st.markdown("**緊張**")
+    sim_arousal = st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="sim_arousal",
+        format_func=lambda x: AROUSAL_LABELS[x],
+    )
+
+with c3:
+    st.markdown("**違和感**")
+    sim_diff = st.radio(
+        label="",
+        options=[5, 4, 3, 2, 1],
+        index=2,
+        key="sim_diff",
+        format_func=lambda x: DIFF_LABELS[x],
+    )
+
 
     if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
