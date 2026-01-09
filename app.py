@@ -14,6 +14,7 @@ SEQ_DIR = os.path.join(BASE_DIR, "sequential")     # single -> seq
 SIM_DIR = os.path.join(BASE_DIR, "simultaneous")   # chord  -> sim
 
 LOCAL_CSV = "evaluation_results.csv"
+PARTICIPANTS_CSV = "participants.csv"  # ★追加：参加者属性
 ADMIN_PIN = "0000"
 
 # =========================
@@ -59,6 +60,23 @@ def init_csv():
 
 def append_row(row):
     with open(LOCAL_CSV, "a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(row)
+
+# ★追加：参加者属性CSV
+def init_participants_csv():
+    if not os.path.exists(PARTICIPANTS_CSV):
+        header = [
+            "Participant_ID",
+            "Timestamp_UTC",
+            "Tuning_Exp",          # チューニング経験
+            "Tuning_ByEar",        # 耳で合わせる頻度
+            "Tuning_Instruments",  # 楽器（自由記述）
+        ]
+        with open(PARTICIPANTS_CSV, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(header)
+
+def append_participant_row(row):
+    with open(PARTICIPANTS_CSV, "a", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow(row)
 
 def make_pairs(seq_files, sim_files):
@@ -110,7 +128,6 @@ DIFF_LABELS = {
     1: "全く違和感がない",
 }
 
-
 st.markdown("""
 <style>
 .big-title {font-size: 28px; font-weight: 800; margin-bottom: 6px;}
@@ -159,6 +176,10 @@ if "play_count_seq" not in st.session_state:
 if "play_count_sim" not in st.session_state:
     st.session_state.play_count_sim = 0
 
+# ★追加：背景アンケ済みか
+if "profile_done" not in st.session_state:
+    st.session_state.profile_done = False
+
 # =========================
 # 参加者ID入力
 # =========================
@@ -181,21 +202,101 @@ if not st.session_state.participant_id and not st.session_state.is_admin:
 # =========================
 if st.session_state.is_admin:
     st.warning("管理者モード（評価は記録しません）")
+
+    # 両CSVを初期化
     init_csv()
+    init_participants_csv()
+
+    # 評価CSV
     if os.path.exists(LOCAL_CSV):
         with open(LOCAL_CSV, "rb") as f:
-            st.download_button("⬇️ CSVをダウンロード", f, file_name=LOCAL_CSV, mime="text/csv")
+            st.download_button("⬇️ 評価CSV（evaluation_results.csv）をダウンロード", f, file_name=LOCAL_CSV, mime="text/csv")
         try:
             df = pd.read_csv(LOCAL_CSV)
-            st.info(f"記録件数：{len(df)}")
+            st.info(f"評価 記録件数：{len(df)}")
         except:
-            st.info("まだデータがありません。")
+            st.info("評価CSV：まだデータがありません。")
+
+    # 参加者属性CSV
+    if os.path.exists(PARTICIPANTS_CSV):
+        with open(PARTICIPANTS_CSV, "rb") as f:
+            st.download_button("⬇️ 参加者CSV（participants.csv）をダウンロード", f, file_name=PARTICIPANTS_CSV, mime="text/csv")
+        try:
+            df2 = pd.read_csv(PARTICIPANTS_CSV)
+            st.info(f"参加者属性 記録件数：{len(df2)}")
+        except:
+            st.info("参加者CSV：まだデータがありません。")
+
     if st.button("管理者モードを終了"):
         st.session_state.clear()
         st.rerun()
     st.stop()
 
 participant_id = st.session_state.participant_id
+
+# =========================
+# ★追加：背景アンケート（チューニング経験）
+# =========================
+if (not st.session_state.is_admin) and (not st.session_state.profile_done):
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("## 最初にいくつか質問（30秒）")
+    st.markdown("<div class='small'>音の感じ方に影響する可能性があるため、自己申告で回答してください。未回答でもOKです。</div>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    tuning_exp = st.radio(
+        "Q1. 自分で楽器のチューニング（調弦/調整）を行った経験はありますか？",
+        ["未回答", "ある（よくする）", "ある（たまにする）", "ある（過去に少し）", "ない"],
+        index=0,
+        key="tuning_exp",
+    )
+
+    tuning_by_ear = st.radio(
+        "Q2. チューニングのとき、耳で音程を合わせることはありますか？",
+        ["未回答", "よくある（耳で合わせることが多い）", "たまにある（チューナー中心だが耳でも確認）", "ほとんどない（チューナー任せ/他人に任せる）", "ない"],
+        index=0,
+        key="tuning_by_ear",
+    )
+
+    tuning_instruments = st.text_input(
+        "Q3. チューニングする楽器があれば（例：ギター、バイオリン、管楽器、ドラムなど）",
+        value=st.session_state.get("tuning_instruments", ""),
+        key="tuning_instruments",
+        placeholder="未回答でもOK",
+    )
+
+    cA, cB = st.columns([1, 1])
+    with cA:
+        if st.button("この回答で開始する ▶"):
+            init_participants_csv()
+            ts = datetime.datetime.utcnow().isoformat()
+            row = [
+                participant_id,
+                ts,
+                tuning_exp,
+                tuning_by_ear,
+                tuning_instruments.strip(),
+            ]
+            append_participant_row(row)
+            st.session_state.profile_done = True
+            st.rerun()
+
+    with cB:
+        if st.button("未回答で開始する ▶"):
+            init_participants_csv()
+            ts = datetime.datetime.utcnow().isoformat()
+            row = [
+                participant_id,
+                ts,
+                "未回答",
+                "未回答",
+                "",
+            ]
+            append_participant_row(row)
+            st.session_state.profile_done = True
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 # =========================
 # 音源ロード（seq / sim）
@@ -268,7 +369,6 @@ if phase == "seq":
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # ★ここから評価UI（必ず if phase=="seq" の中に入れる）
     st.markdown("### 評価")
     c1, c2, c3 = st.columns(3)
 
@@ -338,7 +438,6 @@ else:
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # ★ここから評価UI（必ず else の中に入れる）
     st.markdown("### 評価（sim）")
     c1, c2, c3 = st.columns(3)
 
@@ -413,5 +512,3 @@ else:
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-
