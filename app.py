@@ -35,6 +35,19 @@ def get_sheets():
     # Secretsに入れたJSONを読み込む
     info = json.loads(st.secrets["gsheets"]["service_account_json"])
 
+        # --- ここから追加：private_key の改行を正規化 ---
+    pk = info.get("private_key", "")
+    # 文字列 "\n" を 実改行に変換（ここが重要）
+    pk = pk.replace("\\n", "\n")
+    # 念のため CRLF を LF に統一
+    pk = pk.replace("\r\n", "\n")
+    # 末尾に改行がない場合、付ける（ライブラリが嫌がることがある）
+    if not pk.endswith("\n"):
+        pk += "\n"
+    info["private_key"] = pk
+    # --- ここまで追加 ---
+
+
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.file",
