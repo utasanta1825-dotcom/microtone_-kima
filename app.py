@@ -7,6 +7,8 @@ import datetime
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import json
+
 
 
 # =========================
@@ -27,20 +29,26 @@ ADMIN_PIN = "0000"
 # =========================
 # Google Sheets
 # =========================
+
 @st.cache_resource
 def get_sheets():
-    info = st.secrets["gsheets"]["service_account"]
+    # Secretsに入れたJSONを読み込む
+    info = json.loads(st.secrets["gsheets"]["service_account_json"])
+
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.file",
     ]
+
     creds = Credentials.from_service_account_info(info, scopes=scopes)
     gc = gspread.authorize(creds)
 
     sh = gc.open_by_key(st.secrets["gsheets"]["spreadsheet_id"])
-    ws_results = sh.worksheet("results")       # 評価用シート名
-    ws_profile = sh.worksheet("participants")  # 参加者属性シート名
+    ws_results = sh.worksheet("results")
+    ws_profile = sh.worksheet("participants")
+
     return ws_results, ws_profile
+
 
 
 def abs_path(rel_path: str) -> str:
