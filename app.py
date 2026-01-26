@@ -34,8 +34,6 @@ ADMIN_PIN = "0000"
 @st.cache_resource
 def get_sheets():
     info = dict(st.secrets["gsheets"]["service_account"])
-
-    # 念のため \n を実改行に変換（これで事故に強い）
     info["private_key"] = info["private_key"].replace("\\n", "\n")
 
     scopes = [
@@ -46,9 +44,8 @@ def get_sheets():
     gc = gspread.authorize(creds)
 
     sh = gc.open_by_key(st.secrets["gsheets"]["spreadsheet_id"])
-    ws_results = sh.worksheet("results")
-    ws_profile = sh.worksheet("participants")
-    return ws_results, ws_profile
+    return sh.worksheet("results"), sh.worksheet("participants")
+
 
 
 
