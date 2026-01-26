@@ -30,37 +30,26 @@ ADMIN_PIN = "0000"
 # Google Sheets
 # =========================
 
+
 @st.cache_resource
 def get_sheets():
-    # Secretsに入れたJSONを読み込む
-    info = json.loads(st.secrets["gsheets"]["service_account_json"])
+    info = dict(st.secrets["gsheets"]["service_account"])
 
-        # --- ここから追加：private_key の改行を正規化 ---
-    pk = info.get("private_key", "")
-    # 文字列 "\n" を 実改行に変換（ここが重要）
-    pk = pk.replace("\\n", "\n")
-    # 念のため CRLF を LF に統一
-    pk = pk.replace("\r\n", "\n")
-    # 末尾に改行がない場合、付ける（ライブラリが嫌がることがある）
-    if not pk.endswith("\n"):
-        pk += "\n"
-    info["private_key"] = pk
-    # --- ここまで追加 ---
-
+    # 念のため \n を実改行に変換（これで事故に強い）
+    info["private_key"] = info["private_key"].replace("\\n", "\n")
 
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.file",
     ]
-
     creds = Credentials.from_service_account_info(info, scopes=scopes)
     gc = gspread.authorize(creds)
 
     sh = gc.open_by_key(st.secrets["gsheets"]["spreadsheet_id"])
     ws_results = sh.worksheet("results")
     ws_profile = sh.worksheet("participants")
-
     return ws_results, ws_profile
+
 
 
 
