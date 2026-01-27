@@ -7,9 +7,6 @@ import datetime
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import json
-
-
 
 # =========================
 # 設定
@@ -19,18 +16,12 @@ SEQ_DIR = os.path.join(BASE_DIR, "sequential")     # single -> seq
 SIM_DIR = os.path.join(BASE_DIR, "simultaneous")   # chord  -> sim
 
 LOCAL_CSV = "evaluation_results.csv"
-PARTICIPANTS_CSV = "participants.csv"  # ★追加：参加者属性
+PARTICIPANTS_CSV = "participants.csv"  # 参加者属性
 ADMIN_PIN = "0000"
-
-# =========================
-# ユーティリティ
-# =========================
 
 # =========================
 # Google Sheets
 # =========================
-
-
 @st.cache_resource
 def get_sheets():
     info = dict(st.secrets["gsheets"]["service_account"])
@@ -47,9 +38,9 @@ def get_sheets():
     return sh.worksheet("results"), sh.worksheet("participants")
 
 
-
-
-
+# =========================
+# ユーティリティ
+# =========================
 def abs_path(rel_path: str) -> str:
     base = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base, rel_path)
@@ -65,7 +56,7 @@ def read_audio_bytes(rel_path: str):
     try:
         with open(abs_path(rel_path), "rb") as f:
             return f.read()
-    except:
+    except Exception:
         return None
 
 def init_csv():
@@ -92,28 +83,23 @@ def append_row(row):
     ws_results, _ = get_sheets()
     ws_results.append_row(row, value_input_option="USER_ENTERED")
 
-
-# ★追加：参加者属性CSV
 def init_participants_csv():
     if not os.path.exists(PARTICIPANTS_CSV):
         header = [
             "Participant_ID",
             "Timestamp_UTC",
-            "Tuning_Exp",          # チューニング経験
-            "Tuning_ByEar",        # 耳で合わせる頻度
-            "Tuning_Instruments",  # 楽器（自由記述）
+            "Tuning_Exp",
+            "Tuning_ByEar",
+            "Tuning_Instruments",
         ]
         with open(PARTICIPANTS_CSV, "w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerow(header)
-
 
 def append_participant_row(row):
     _, ws_profile = get_sheets()
     ws_profile.append_row(row, value_input_option="USER_ENTERED")
 
-
 def make_pairs(seq_files, sim_files):
-    # 例: xxx_seq.wav / xxx_sim.wav の共通 xxx をペアIDにする
     seq = {f.replace("_seq.wav", ""): f for f in seq_files if f.endswith("_seq.wav")}
     sim = {f.replace("_sim.wav", ""): f for f in sim_files if f.endswith("_sim.wav")}
 
@@ -129,14 +115,12 @@ def make_pairs(seq_files, sim_files):
         })
     return pairs
 
+
 # =========================
 # UI / ページ設定
 # =========================
 st.set_page_config(page_title="音律評価実験（2音）", layout="centered")
 
-# =========================
-# 評価ラベル（写真風）
-# =========================
 VALENCE_LABELS = {
     5: "とてもよい",
     4: "よい",
@@ -144,7 +128,6 @@ VALENCE_LABELS = {
     2: "あまりよくない",
     1: "悪い",
 }
-
 AROUSAL_LABELS = {
     5: "とても緊張感がある",
     4: "緊張感がある",
@@ -152,7 +135,6 @@ AROUSAL_LABELS = {
     2: "あまり緊張感がない",
     1: "全く緊張感がない",
 }
-
 DIFF_LABELS = {
     5: "とても違和感がある",
     4: "違和感がある",
@@ -181,6 +163,7 @@ if st.button("🔄 音源キャッシュをクリア"):
     st.session_state.played_sim = False
     st.rerun()
 
+
 # =========================
 # セッション初期化
 # =========================
@@ -194,11 +177,9 @@ if "pair_order" not in st.session_state:
 if "pair_index" not in st.session_state:
     st.session_state.pair_index = 0
 
-# phase: "seq" -> "sim"
 if "phase" not in st.session_state:
     st.session_state.phase = "seq"
 
-# 再生管理（seq / sim）
 if "played_seq" not in st.session_state:
     st.session_state.played_seq = False
 if "played_sim" not in st.session_state:
@@ -209,10 +190,10 @@ if "play_count_seq" not in st.session_state:
 if "play_count_sim" not in st.session_state:
     st.session_state.play_count_sim = 0
 
-# ★追加：背景アンケ済みか
 if "profile_done" not in st.session_state:
     st.session_state.profile_done = False
 
+# seq評価をsim画面でも確実に保存できるように退避
 if "seq_saved" not in st.session_state:
     st.session_state.seq_saved = None  # (valence, arousal, diff)
 
@@ -220,7 +201,7 @@ if "seq_saved" not in st.session_state:
 # =========================
 # 参加者ID入力
 # =========================
-if not st.session_state.participant_id and not st.session_state.is_admin:
+if (not st.session_state.participant_id) and (not st.session_state.is_admin):
     st.markdown("### 実験開始")
     pid = st.text_input("参加者ID（管理者PINもここ）")
     if pid:
@@ -234,32 +215,32 @@ if not st.session_state.participant_id and not st.session_state.is_admin:
             st.error("英数字と _ のみ使用できます。")
     st.stop()
 
+
 # =========================
 # 管理者モード
 # =========================
+if st.session_state.is_admin:
+    st.markdown("## 管理者モード")
 
-    # 両CSVを初期化
     init_csv()
     init_participants_csv()
 
-    # 評価CSV
     if os.path.exists(LOCAL_CSV):
         with open(LOCAL_CSV, "rb") as f:
             st.download_button("⬇️ 評価CSV（evaluation_results.csv）をダウンロード", f, file_name=LOCAL_CSV, mime="text/csv")
         try:
             df = pd.read_csv(LOCAL_CSV)
             st.info(f"評価 記録件数：{len(df)}")
-        except:
+        except Exception:
             st.info("評価CSV：まだデータがありません。")
 
-    # 参加者属性CSV
     if os.path.exists(PARTICIPANTS_CSV):
         with open(PARTICIPANTS_CSV, "rb") as f:
             st.download_button("⬇️ 参加者CSV（participants.csv）をダウンロード", f, file_name=PARTICIPANTS_CSV, mime="text/csv")
         try:
             df2 = pd.read_csv(PARTICIPANTS_CSV)
             st.info(f"参加者属性 記録件数：{len(df2)}")
-        except:
+        except Exception:
             st.info("参加者CSV：まだデータがありません。")
 
     if st.button("管理者モードを終了"):
@@ -269,10 +250,11 @@ if not st.session_state.participant_id and not st.session_state.is_admin:
 
 participant_id = st.session_state.participant_id
 
+
 # =========================
-# ★追加：背景アンケート（チューニング経験）
+# 背景アンケート
 # =========================
-if (not st.session_state.is_admin) and (not st.session_state.profile_done):
+if (not st.session_state.profile_done):
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("## 最初にいくつか質問（30秒）")
     st.markdown("<div class='small'>音の感じ方に影響する可能性があるため、自己申告で回答してください。未回答でもOKです。</div>", unsafe_allow_html=True)
@@ -304,13 +286,7 @@ if (not st.session_state.is_admin) and (not st.session_state.profile_done):
         if st.button("この回答で開始する ▶"):
             init_participants_csv()
             ts = datetime.datetime.utcnow().isoformat()
-            row = [
-                participant_id,
-                ts,
-                tuning_exp,
-                tuning_by_ear,
-                tuning_instruments.strip(),
-            ]
+            row = [participant_id, ts, tuning_exp, tuning_by_ear, tuning_instruments.strip()]
             append_participant_row(row)
             st.session_state.profile_done = True
             st.rerun()
@@ -319,19 +295,14 @@ if (not st.session_state.is_admin) and (not st.session_state.profile_done):
         if st.button("未回答で開始する ▶"):
             init_participants_csv()
             ts = datetime.datetime.utcnow().isoformat()
-            row = [
-                participant_id,
-                ts,
-                "未回答",
-                "未回答",
-                "",
-            ]
+            row = [participant_id, ts, "未回答", "未回答", ""]
             append_participant_row(row)
             st.session_state.profile_done = True
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
+
 
 # =========================
 # 音源ロード（seq / sim）
@@ -351,7 +322,6 @@ if not pairs:
     st.error("ペアが作れませんでした。*_seq.wav と *_sim.wav の命名が揃っているか確認してください。")
     st.stop()
 
-# 初回だけランダム順
 if not st.session_state.pair_order:
     st.session_state.pair_order = random.sample(range(len(pairs)), len(pairs))
     st.session_state.pair_index = 0
@@ -375,6 +345,7 @@ st.markdown(f"**参加者ID:** `{participant_id}`　<span class='badge'>{idx+1} 
 st.progress((idx + 1) / total)
 
 phase = st.session_state.phase
+
 
 # =========================
 # ① seq フェーズ
@@ -401,7 +372,6 @@ if phase == "seq":
         st.info("まず上のボタンで再生を有効化してください。")
 
     st.caption(f"seq 再生回数：{st.session_state.play_count_seq}")
-
     st.markdown("<hr>", unsafe_allow_html=True)
 
     st.markdown("### 評価")
@@ -437,16 +407,20 @@ if phase == "seq":
             format_func=lambda x: DIFF_LABELS[x],
         )
 
+    # デバッグ（確認できたら消してOK）
+    st.write(
+        "DEBUG seq:",
+        st.session_state.get("seq_valence"),
+        st.session_state.get("seq_arousal"),
+        st.session_state.get("seq_diff"),
+    )
 
-    st.write("DEBUG seq:", st.session_state.get("seq_valence"), st.session_state.get("seq_arousal"), st.session_state.get("seq_diff"))
-
-
-        if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
-        # ★ここでseqの評価を“退避”させる（sim画面でも確実に使えるように）
+    if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+        # seqの評価を退避（sim画面で確実に保存するため）
         st.session_state.seq_saved = (
-            st.session_state.get("seq_valence", 3),
-            st.session_state.get("seq_arousal", 3),
-            st.session_state.get("seq_diff", 3),
+            st.session_state["seq_valence"],
+            st.session_state["seq_arousal"],
+            st.session_state["seq_diff"],
         )
 
         st.session_state.phase = "sim"
@@ -454,9 +428,8 @@ if phase == "seq":
         st.session_state.play_count_sim = 0
         st.rerun()
 
-
-
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # =========================
 # ② sim フェーズ
@@ -483,7 +456,6 @@ else:
         st.info("まず上のボタンで再生を有効化してください。")
 
     st.caption(f"sim 再生回数：{st.session_state.play_count_sim}")
-
     st.markdown("<hr>", unsafe_allow_html=True)
 
     st.markdown("### 評価（sim）")
@@ -517,12 +489,11 @@ else:
             index=2,
             key="sim_diff",
             format_func=lambda x: DIFF_LABELS[x],
-        )　
+        )
 
-　   if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
+    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
 
-        # ★seqの値は退避したものを使う
         if st.session_state.seq_saved is None:
             st.error("seqの評価が見つかりません。seq画面に戻ってやり直してください。")
             st.stop()
@@ -555,15 +526,13 @@ else:
         st.session_state.play_count_sim = 0
 
         # 評価値も消す（前回値残り対策）
-        for k in ["seq_valence","seq_arousal","seq_diff","sim_valence","sim_arousal","sim_diff"]:
+        for k in ["seq_valence", "seq_arousal", "seq_diff", "sim_valence", "sim_arousal", "sim_diff"]:
             if k in st.session_state:
                 del st.session_state[k]
 
-        # ★seq退避データもリセット
+        # 退避データもリセット
         st.session_state.seq_saved = None
 
         st.rerun()
-
-
 
     st.markdown("</div>", unsafe_allow_html=True)
