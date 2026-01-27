@@ -213,6 +213,10 @@ if "play_count_sim" not in st.session_state:
 if "profile_done" not in st.session_state:
     st.session_state.profile_done = False
 
+if "seq_saved" not in st.session_state:
+    st.session_state.seq_saved = None  # (valence, arousal, diff)
+
+
 # =========================
 # 参加者ID入力
 # =========================
@@ -437,11 +441,20 @@ if phase == "seq":
     st.write("DEBUG seq:", st.session_state.get("seq_valence"), st.session_state.get("seq_arousal"), st.session_state.get("seq_diff"))
 
 
-    if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+        if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
+        # ★ここでseqの評価を“退避”させる（sim画面でも確実に使えるように）
+        st.session_state.seq_saved = (
+            st.session_state.get("seq_valence", 3),
+            st.session_state.get("seq_arousal", 3),
+            st.session_state.get("seq_diff", 3),
+        )
+
         st.session_state.phase = "sim"
         st.session_state.played_sim = False
         st.session_state.play_count_sim = 0
         st.rerun()
+
+
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -504,15 +517,17 @@ else:
             index=2,
             key="sim_diff",
             format_func=lambda x: DIFF_LABELS[x],
-        )
+        )　
 
-    if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
+　   if st.button("評価を記録して次のペアへ", disabled=not st.session_state.played_sim):
         timestamp = datetime.datetime.utcnow().isoformat()
 
-        # seq の値
-        seq_valence = st.session_state.get("seq_valence", 3)
-        seq_arousal = st.session_state.get("seq_arousal", 3)
-        seq_diff    = st.session_state.get("seq_diff", 3)
+        # ★seqの値は退避したものを使う
+        if st.session_state.seq_saved is None:
+            st.error("seqの評価が見つかりません。seq画面に戻ってやり直してください。")
+            st.stop()
+
+        seq_valence, seq_arousal, seq_diff = st.session_state.seq_saved
 
         row = [
             participant_id,
@@ -544,6 +559,11 @@ else:
             if k in st.session_state:
                 del st.session_state[k]
 
+        # ★seq退避データもリセット
+        st.session_state.seq_saved = None
+
         st.rerun()
+
+
 
     st.markdown("</div>", unsafe_allow_html=True)
