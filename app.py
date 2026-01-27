@@ -433,6 +433,10 @@ if phase == "seq":
             format_func=lambda x: DIFF_LABELS[x],
         )
 
+
+    st.write("DEBUG seq:", st.session_state.get("seq_valence"), st.session_state.get("seq_arousal"), st.session_state.get("seq_diff"))
+
+
     if st.button("seqの評価を確定して、simへ", disabled=not st.session_state.played_seq):
         st.session_state.phase = "sim"
         st.session_state.played_sim = False
